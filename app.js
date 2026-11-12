@@ -18,6 +18,8 @@ const sequences = [
   [['Interactive','1B'],['Interactive','2B'],['Static','1A'],['Static','2A']]
 ];
 const escapeHTML = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const formatPrompt = text => escapeHTML(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+const plainPrompt = text => text.replace(/\*\*(.+?)\*\*/g, '$1');
 function save(){try{localStorage.setItem(storageKey,JSON.stringify(state));}catch(e){notice.textContent='Browser storage is unavailable. Keep this page open and download your results before closing it.';}}
 function csvCell(v){let s=String(v??'');if(/^[=+@-]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';}
 function download(){
@@ -43,7 +45,7 @@ function ready(){
 }
 async function prepare(){
  const [condition,qid]=sequences[state.sequence][state.part], question=config.questions[qid];
- screen.innerHTML=`<h2>Part ${state.part+1} of 4 · ${condition}</h2><p id="loading">Loading the visualization…</p><div id="chart-wrap" hidden><iframe id="chart" title="${condition} study visualization"></iframe></div><button id="start" disabled>Start part</button><div id="question" hidden><h2>${escapeHTML(question.prompt)}</h2><form id="answer"><fieldset><legend>Question 1: Select a location</legend>${question.options.map((option,i)=>`<label class="option"><input type="radio" name="answer" value="${i}" required> ${escapeHTML(option)}</label>`).join('')}</fieldset><fieldset><legend>Question 2: Enter a number</legend><label for="numeric-answer">${escapeHTML(question.numeric.prompt)}</label><p><input id="numeric-answer" name="numeric_answer" type="number" min="${escapeHTML(question.numeric.min)}" max="${escapeHTML(question.numeric.max)}" step="${escapeHTML(question.numeric.step)}" required aria-describedby="numeric-help"> ${escapeHTML(question.numeric.unit)}</p><p id="numeric-help" class="muted">Enter an average chair occupancy estimate from 0 to 100 without a percent sign. Decimals are allowed.</p></fieldset><button>Submit both answers</button></form></div>`;
+ screen.innerHTML=`<h2>Part ${state.part+1} of 4 · ${condition}</h2><p id="loading">Loading the visualization…</p><div id="chart-wrap" hidden><iframe id="chart" title="${condition} study visualization"></iframe></div><button id="start" disabled>Start part</button><div id="question" hidden><p style="font-size:23px">${formatPrompt(question.prompt)}</p><form id="answer"><fieldset><legend>Question 1: Select a location</legend>${question.options.map((option,i)=>`<label class="option"><input type="radio" name="answer" value="${i}" required> ${escapeHTML(option)}</label>`).join('')}</fieldset><fieldset><legend>Question 2: Enter a number</legend><label for="numeric-answer" style="font-size:23px">${formatPrompt(question.numeric.prompt)}</label><p><input id="numeric-answer" name="numeric_answer" type="number" min="${escapeHTML(question.numeric.min)}" max="${escapeHTML(question.numeric.max)}" step="${escapeHTML(question.numeric.step)}" required aria-describedby="numeric-help"> ${escapeHTML(question.numeric.unit)}</p><p id="numeric-help" class="muted">Enter an average chair occupancy estimate from 0 to 100 without a percent sign. Decimals are allowed.</p></fieldset><button>Submit both answers</button></form></div>`;
  const frame=document.getElementById('chart'), start=document.getElementById('start'), loading=document.getElementById('loading');
  let loaded=false;
  // Real chart files must announce readiness after Vega finishes rendering.
@@ -64,7 +66,7 @@ async function prepare(){
    const rawNumber=String(form.get('numeric_answer')??'').trim();
    const numericResponse=Number(rawNumber);
    if(!rawNumber || !Number.isFinite(numericResponse) || numericResponse<question.numeric.min || numericResponse>question.numeric.max)return;
-   state.rows.push({study_version:state.version,demo:state.demo,participant_id:state.id,sequence_id:state.sequence+1,part_number:state.part+1,condition,task_id:qid[0],variant:qid[1],question_id:qid,question_text:question.prompt,response,numeric_question_text:question.numeric.prompt,numeric_response:numericResponse,numeric_unit:question.numeric.unit,completion_seconds:Number(((performance.now()-startTime)/1000).toFixed(3)),question_difficulty:'',visualization_difficulty:''});
+   state.rows.push({study_version:state.version,demo:state.demo,participant_id:state.id,sequence_id:state.sequence+1,part_number:state.part+1,condition,task_id:qid[0],variant:qid[1],question_id:qid,question_text:plainPrompt(question.prompt),response,numeric_question_text:plainPrompt(question.numeric.prompt),numeric_response:numericResponse,numeric_unit:question.numeric.unit,completion_seconds:Number(((performance.now()-startTime)/1000).toFixed(3)),question_difficulty:'',visualization_difficulty:''});
    startTime=null;state.phase='rating';save();ratings();
  };
 }
